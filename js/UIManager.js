@@ -209,65 +209,90 @@ class UIManager {
         const popup = document.createElement('div');
         popup.id = 'control-panel-popup';
         popup.style.position = 'fixed';
-        popup.style.top = '10vh';
-        popup.style.left = '10vw';
-        popup.style.width = '70vw';
-        popup.style.minHeight = '60vh';
-        popup.style.background = '#000';
-        popup.style.border = '4px solid #0f0';
-        popup.style.padding = '4vh 4vw';
+        popup.style.top = '50%';
+        popup.style.left = '50%';
+        popup.style.transform = 'translate(-50%, -50%)';
+        popup.style.width = '38vw';
+        popup.style.minHeight = '36vh';
         popup.style.zIndex = '100';
-        popup.style.fontFamily = "'Courier New', monospace";
-        popup.style.color = '#0f0';
-        
-        // Title
+
+        // Corner brackets
+        ['tl','tr','bl','br'].forEach(pos => {
+            const c = document.createElement('div');
+            c.className = `cp-corner ${pos}`;
+            popup.appendChild(c);
+        });
+
+        // Scrolling noise line
+        const noise = document.createElement('div');
+        noise.className = 'cp-noise';
+        popup.appendChild(noise);
+
+        // Inner wrapper
+        const inner = document.createElement('div');
+        inner.className = 'cp-inner';
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'cp-header';
+
         const title = document.createElement('div');
-        title.textContent = '/// Control Panel';
-        title.style.fontSize = '2.5vw';
-        title.style.fontWeight = 'bold';
-        title.style.marginBottom = '5vh';
-        popup.appendChild(title);
-        
+        title.className = 'cp-title';
+        title.textContent = 'SYS // CTRL_PANEL';
+        header.appendChild(title);
+
+        const dot = document.createElement('div');
+        dot.className = 'cp-status-dot';
+        header.appendChild(dot);
+        inner.appendChild(header);
+
         // Options container
         const optionsContainer = document.createElement('div');
         optionsContainer.id = 'control-options';
-        
+
         // Option 1: Air Vents
         const option1 = document.createElement('div');
         option1.id = 'option-vents';
-        option1.style.fontSize = '2.5vw';
-        option1.style.marginBottom = '4vh';
-        option1.style.cursor = 'pointer';
-        option1.style.padding = '1.5vh 0';
-        option1.style.display = 'flex';
-        option1.style.alignItems = 'center';
-        option1.style.direction = 'ltr'; // 强制从左到右
-        option1.innerHTML = this.game.state.ventsClosed ? 
-            '<span class="option-arrow" style="color: #0f0; margin-right: 1.5vw; width: 2vw;">&gt;</span><span>Open Air Vents</span><span id="vents-dots" style="margin-left: 1vw; direction: ltr; font-family: \'Courier New\', monospace;"></span>' :
-            '<span class="option-arrow" style="color: #0f0; margin-right: 1.5vw; width: 2vw;">&gt;</span><span>Close Air Vents</span><span id="vents-dots" style="margin-left: 1vw; direction: ltr; font-family: \'Courier New\', monospace;"></span>';
-        option1.addEventListener('click', () => {
-            this.game.toggleVents();
-            // 不在这里立即更新，等toggleVents完成后会自动调用updateControlPanelOptions
-        });
+        option1.className = 'cp-option active';
+        option1.innerHTML = `
+            <span class="option-arrow cp-option-arrow">&rsaquo;</span>
+            <span class="cp-option-label">${this.game.state.ventsClosed ? 'OPEN AIR VENTS' : 'CLOSE AIR VENTS'}</span>
+            <span id="vents-dots" class="cp-option-dots"></span>`;
+        option1.addEventListener('click', () => { this.game.toggleVents(); });
         optionsContainer.appendChild(option1);
-        
+
         // Option 2: Restart Cameras
         const option2 = document.createElement('div');
         option2.id = 'option-cameras';
-        option2.style.fontSize = '2.5vw';
-        option2.style.cursor = 'pointer';
-        option2.style.padding = '1.5vh 0';
-        option2.style.display = 'flex';
-        option2.style.alignItems = 'center';
-        option2.style.direction = 'ltr'; // 强制从左到右
-        option2.innerHTML = '<span class="option-arrow" style="color: transparent; margin-right: 1.5vw; width: 2vw;">&gt;</span><span>Restart Cameras</span><span id="camera-dots" style="margin-left: 1vw; direction: ltr; font-family: \'Courier New\', monospace;"></span><span id="camera-status" style="margin-left: auto; padding-right: 2vw; direction: ltr;"></span>';
+        option2.className = 'cp-option';
+        option2.innerHTML = `
+            <span class="option-arrow cp-option-arrow">&rsaquo;</span>
+            <span class="cp-option-label">RESTART CAMERAS</span>
+            <span id="camera-dots" class="cp-option-dots"></span>
+            <span id="camera-status" class="cp-option-status"></span>`;
         option2.addEventListener('click', () => {
             this.selectControlOption('cameras');
             this.handleRestartCamera();
         });
         optionsContainer.appendChild(option2);
-        
-        popup.appendChild(optionsContainer);
+
+        inner.appendChild(optionsContainer);
+
+        // Divider + vent status readout
+        const divider = document.createElement('div');
+        divider.className = 'cp-divider';
+        inner.appendChild(divider);
+
+        const ventIndicator = document.createElement('div');
+        ventIndicator.className = 'cp-vent-indicator';
+        ventIndicator.innerHTML = `
+            <span class="cp-vent-label">VENT STATUS</span>
+            <span id="cp-vent-readout" class="cp-vent-value ${this.game.state.ventsClosed ? 'closed' : 'open'}">
+                ${this.game.state.ventsClosed ? 'SEALED' : 'NOMINAL'}
+            </span>`;
+        inner.appendChild(ventIndicator);
+
+        popup.appendChild(inner);
         
         // Click outside to close (only if no operation in progress)
         document.addEventListener('click', (e) => {
@@ -290,23 +315,22 @@ class UIManager {
     selectControlOption(option) {
         const option1 = document.getElementById('option-vents');
         const option2 = document.getElementById('option-cameras');
-        
+        if (!option1 || !option2) return;
+
         if (option === 'vents') {
-            const arrow1 = option1.querySelector('.option-arrow');
-            const arrow2 = option2.querySelector('.option-arrow');
-            if (arrow1) arrow1.style.color = '#0f0';
-            if (arrow2) arrow2.style.color = 'transparent';
-            
-            // 更新通风口文本（不包括dots span）
-            const text1 = option1.querySelector('span:nth-child(2)');
-            if (text1) {
-                text1.textContent = this.game.state.ventsClosed ? 'Open Air Vents' : 'Close Air Vents';
+            option1.classList.add('active');
+            option2.classList.remove('active');
+            const text1 = option1.querySelector('.cp-option-label');
+            if (text1) text1.textContent = this.game.state.ventsClosed ? 'OPEN AIR VENTS' : 'CLOSE AIR VENTS';
+            // Update vent readout
+            const readout = document.getElementById('cp-vent-readout');
+            if (readout) {
+                readout.className = `cp-vent-value ${this.game.state.ventsClosed ? 'closed' : 'open'}`;
+                readout.textContent = this.game.state.ventsClosed ? 'SEALED' : 'NOMINAL';
             }
         } else {
-            const arrow1 = option1.querySelector('.option-arrow');
-            const arrow2 = option2.querySelector('.option-arrow');
-            if (arrow1) arrow1.style.color = 'transparent';
-            if (arrow2) arrow2.style.color = '#0f0';
+            option2.classList.add('active');
+            option1.classList.remove('active');
         }
     }
 
@@ -322,14 +346,11 @@ class UIManager {
         if (!dotsSpan) return;
         
         if (this.game.state.ventsToggling) {
-            // 正在切换，显示点动画
-            dotsSpan.style.color = '#0f0'; // Green dots
             if (!dotsSpan.dataset.animating) {
                 dotsSpan.dataset.animating = 'true';
                 this.animateLoadingDots(dotsSpan);
             }
         } else {
-            // 不在切换中，清空点
             dotsSpan.textContent = '';
             delete dotsSpan.dataset.animating;
         }
@@ -342,29 +363,24 @@ class UIManager {
         if (!statusSpan) return;
         
         if (this.game.state.cameraRestarting) {
-            // Restarting, show dots after button
             if (dotsSpan) {
-                dotsSpan.style.color = '#0f0'; // Green dots
                 if (!dotsSpan.dataset.animating) {
                     dotsSpan.dataset.animating = 'true';
                     this.animateLoadingDots(dotsSpan);
                 }
             }
-            // 只有在摄像头确实故障时才显示ERR
             if (this.game.state.cameraFailed) {
-                statusSpan.style.color = '#f00';
+                statusSpan.className = 'cp-option-status err';
                 statusSpan.textContent = 'ERR';
             } else {
-                // 没有故障时，重启期间不显示ERR
                 statusSpan.textContent = '';
             }
         } else if (this.game.state.cameraFailed) {
-            // Failed, show ERR on right, no dots
             if (dotsSpan) {
                 dotsSpan.textContent = '';
                 delete dotsSpan.dataset.animating;
             }
-            statusSpan.style.color = '#f00';
+            statusSpan.className = 'cp-option-status err';
             statusSpan.textContent = 'ERR';
         } else {
             // Normal, don't show anything
